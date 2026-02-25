@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: monetari-db
+    environment:
+      POSTGRES_USER: monetari
+      POSTGRES_PASSWORD: monetari_secret
+      POSTGRES_DB: monetari
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U monetari']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - monetari-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: monetari-app
+    environment:
+      - NODE_ENV=production
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=monetari
+      - DATABASE_PASSWORD=monetari_secret
+      - DATABASE_NAME=monetari
+      - API_KEY=${API_KEY:-your-secret-api-key}
+      - PORT=3000
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - monetari-network
+
+volumes:
+  postgres_data:
+
+networks:
+  monetari-network:
+    driver: bridge
